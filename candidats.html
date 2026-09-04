@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Espace candidat · Swipelink</title>
+<meta name="description" content="Candidats : déposez votre CV et soyez contacté dès qu'une offre correspond à votre profil. Grande distribution, CHR, retail, métiers de terrain.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=4">
+<link rel="icon" href="/assets/safeimagekit-capture-d-cran-2025-04-22-164446.png" />
+<style>
+  /* Le badge « Espace candidat » affiche le S de Swipelink à la place du point animé */
+  .page-header .eyebrow::before { content: none; }
+  .eyebrow-s { height: 16px; width: 16px; display: block; border-radius: 50%; }
+
+  .candidat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .candidat-grid { grid-template-columns: 1fr; gap: 2rem; } }
+
+  .candidat-steps { display: flex; flex-direction: column; gap: 1rem; }
+  .candidat-step {
+    display: flex; gap: 1rem; align-items: flex-start;
+    padding: 1.25rem 1.5rem;
+    background: rgba(255,255,255,.7);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    backdrop-filter: blur(12px);
+  }
+  .candidat-step .num {
+    width: 40px; height: 40px; flex-shrink: 0;
+    border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--primary), var(--primary-vivid));
+    color: #fff; font-weight: 700; font-size: 1rem;
+  }
+  .candidat-step h3 { margin: 0 0 .25rem; font-size: 1.02rem; }
+  .candidat-step p { margin: 0; color: var(--text-soft); font-size: .92rem; }
+
+  .candidat-note {
+    display: flex; align-items: flex-start; gap: .65rem;
+    font-size: .88rem; color: var(--text-soft);
+    padding: 1rem 1.25rem;
+    background: var(--primary-soft, #eff4ff);
+    border-radius: var(--r);
+  }
+  .candidat-note svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--primary); margin-top: 1px; }
+
+  .cv-card {
+    background: rgba(255,255,255,.75);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 2.5rem;
+    box-shadow: var(--shadow);
+    position: relative; overflow: hidden;
+  }
+  .cv-card::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(500px 280px at 100% 0%, rgba(37,99,235,.08), transparent 60%);
+    pointer-events: none;
+  }
+  .cv-card > * { position: relative; }
+  @media (max-width: 600px) { .cv-card { padding: 1.5rem; } }
+
+  .cv-form { display: grid; gap: 1.1rem; }
+  .cv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+  @media (max-width: 600px) { .cv-row { grid-template-columns: 1fr; } }
+
+  .cv-field { display: flex; flex-direction: column; gap: .4rem; }
+  .cv-field label { font-size: .86rem; font-weight: 600; color: var(--ink); }
+  .cv-field input {
+    width: 100%;
+    padding: .8rem 1rem;
+    font: inherit; font-size: .95rem;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .cv-field input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+  }
+  .cv-field.has-error input { border-color: #dc2626; }
+  .cv-error { display: none; font-size: .8rem; color: #dc2626; }
+  .cv-field.has-error .cv-error { display: block; }
+
+  .cv-drop {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 1.9rem 1.25rem;
+    text-align: center;
+    cursor: pointer;
+    background: #fff;
+    transition: border-color .2s, background .2s;
+  }
+  .cv-drop:hover, .cv-drop.is-over { border-color: var(--primary); background: rgba(37,99,235,.04); }
+  .cv-drop.has-error { border-color: #dc2626; }
+  .cv-drop svg { width: 34px; height: 34px; color: var(--primary); margin-bottom: .5rem; }
+  .cv-drop strong { display: block; font-size: .95rem; color: var(--ink); }
+  .cv-drop span { display: block; font-size: .82rem; color: var(--text-soft); margin-top: .25rem; }
+  .cv-drop input { display: none; }
+
+  .cv-file {
+    display: none;
+    align-items: center; gap: .65rem;
+    padding: .7rem 1rem;
+    background: rgba(37,99,235,.06);
+    border: 1px solid rgba(37,99,235,.2);
+    border-radius: 12px;
+    font-size: .9rem; color: var(--ink); font-weight: 500;
+    text-align: left;
+  }
+  .cv-file.is-visible { display: flex; }
+  .cv-file svg { width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+  .cv-file .cv-file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cv-file button {
+    border: none; background: none; cursor: pointer;
+    color: var(--text-soft); font-size: 1.1rem; line-height: 1; padding: .2rem;
+  }
+  .cv-file button:hover { color: #dc2626; }
+
+  /* Champ piège anti-bots : invisible pour les humains, rempli par les robots */
+  .cv-hp {
+    position: absolute !important;
+    left: -9999px; top: -9999px;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    opacity: 0;
+  }
+
+  .cv-limit {
+    display: none;
+    gap: .6rem; align-items: flex-start;
+    padding: .85rem 1.1rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    font-size: .87rem; color: #b91c1c; font-weight: 500;
+  }
+  .cv-limit.is-visible { display: flex; }
+  .cv-limit svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  .cv-turnstile { display: flex; justify-content: center; min-height: 0; }
+  .cv-turnstile:not(:empty) { min-height: 65px; }
+
+  .cv-consent { display: flex; gap: .6rem; align-items: flex-start; font-size: .82rem; color: var(--text-soft); }
+  .cv-consent input { margin-top: 3px; accent-color: var(--primary); width: 15px; height: 15px; flex-shrink: 0; }
+  .cv-consent a { color: var(--primary); text-decoration: underline; }
+  .cv-consent.has-error { color: #dc2626; }
+
+  .cv-modal {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 1.25rem;
+    background: rgba(15,23,42,.45);
+    backdrop-filter: blur(6px);
+  }
+  .cv-modal.is-open { display: flex; }
+  .cv-modal-card {
+    background: #fff;
+    border-radius: var(--r-lg, 24px);
+    max-width: 460px; width: 100%;
+    padding: 2.75rem 2.25rem 2.25rem;
+    text-align: center;
+    box-shadow: 0 24px 60px -12px rgba(15,23,42,.35);
+    position: relative;
+    animation: cvModalIn .35s var(--ease-out, ease-out);
+  }
+  @keyframes cvModalIn {
+    from { opacity: 0; transform: translateY(18px) scale(.96); }
+    to { opacity: 1; transform: none; }
+  }
+  .cv-modal-logo { display: block; height: 26px; width: auto; margin: 0 auto 1.5rem; }
+  .cv-modal-card .ok {
+    width: 68px; height: 68px; margin: 0 auto 1.4rem;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 10px 24px -8px rgba(16,185,129,.55);
+  }
+  .cv-modal-card .ok svg { width: 32px; height: 32px; }
+  .cv-modal-card h2 { margin: 0 0 .65rem; font-size: 1.45rem; letter-spacing: -.01em; }
+  .cv-modal-card p { margin: 0 0 1.6rem; color: var(--text-soft); font-size: .97rem; line-height: 1.6; }
+  .cv-modal-close {
+    position: absolute; top: 1rem; right: 1rem;
+    width: 36px; height: 36px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: #fff; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--text-soft); font-size: 1rem; line-height: 1;
+    transition: color .2s, border-color .2s;
+  }
+  .cv-modal-close:hover { color: var(--ink); border-color: var(--primary); }
+</style>
+<meta property="og:title" content="Espace candidat · Swipelink" />
+<meta property="og:description" content="Déposez votre CV et soyez contacté dès qu'une offre correspond à votre profil." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://swipelink.fr/candidats" />
+<meta property="og:image" content="/assets/image-23-04-2025-at-13-47.jpg" />
+<meta property="og:locale" content="fr_FR" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Espace candidat · Swipelink" />
+<meta name="twitter:description" content="Déposez votre CV et soyez contacté dès qu'une offre correspond à votre profil." />
+<link rel="canonical" href="https://swipelink.fr/candidats" />
+</head>
+<body>
+
+<div class="bubbles" aria-hidden="true">
+  <span class="bubble b1"></span>
+  <span class="bubble b2"></span>
+  <span class="bubble b3"></span>
+  <span class="bubble b4"></span>
+  <span class="bubble b5"></span>
+  <span class="bubble b6"></span>
+</div>
+
+<a href="#main" class="skip-link">Aller au contenu</a>
+
+<header class="navbar">
+  <div class="container navbar-inner">
+    <a href="index.html" class="navbar-logo"><img src="/assets/swipelink-bleu.png" alt="Swipelink" decoding="async" fetchpriority="high"></a>
+    <nav>
+      <ul class="navbar-links">
+        <li><a href="index.html">Accueil</a></li>
+        <li><a href="a-propos.html">À propos</a></li>
+        <li><a href="tarifs.html">Tarifs</a></li>
+        <li><a href="blog.html">Blog</a></li>
+        <li><a href="index.html#api">API</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </nav>
+    <div class="navbar-actions">
+      <a href="candidats.html" class="btn btn-outline btn-sm">Espace candidat</a>
+      <a href="https://app.swipelink.fr/recruiter/auth" class="btn btn-outline btn-sm">Se connecter</a>
+      <a href="https://calendar.app.google/DrpxSVXXZdmPwbrh7" target="_blank" rel="noopener" class="btn-liquid is-soft btn-sm-liquid">Demander une démo</a>
+    </div>
+    <button class="mobile-toggle" aria-label="Menu" aria-expanded="false"><span></span></button>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="page-header">
+  <div class="container">
+    <span class="eyebrow" data-reveal><img src="/assets/safeimagekit-capture-d-cran-2025-04-22-164446.png" alt="" class="eyebrow-s">Espace candidat</span>
+    <h1 data-reveal data-reveal-delay="100">Déposez votre CV, on vous contacte <span class="gradient-text">dès qu'on a une offre pour vous</span></h1>
+    <p data-reveal data-reveal-delay="200">Nos recruteurs chassent tous les jours pour les plus grandes enseignes. Laissez-nous votre CV : si un poste correspond à votre profil et votre région, on vous appelle.</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top:2rem;">
+  <div class="container">
+    <div class="candidat-grid">
+
+      <!-- Colonne comment ça marche -->
+      <div class="candidat-steps" data-stagger>
+        <div class="candidat-step">
+          <span class="num">1</span>
+          <div>
+            <h3>Déposez votre CV</h3>
+            <p>2 minutes suffisent : vos coordonnées, votre CV, c'est tout.</p>
+          </div>
+        </div>
+        <div class="candidat-step">
+          <span class="num">2</span>
+          <div>
+            <h3>On analyse votre profil</h3>
+            <p>Votre CV rejoint notre vivier de candidats des métiers de terrain : grande distribution, CHR, retail.</p>
+          </div>
+        </div>
+        <div class="candidat-step">
+          <span class="num">3</span>
+          <div>
+            <h3>On vous appelle quand un poste correspond</h3>
+            <p>Dès qu'une enseigne recrute un profil comme le vôtre dans votre région, un recruteur Swipelink vous contacte directement.</p>
+          </div>
+        </div>
+        <div class="candidat-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>Vos données restent confidentielles et ne sont jamais transmises sans votre accord. Service 100&nbsp;% gratuit pour les candidats.</span>
+        </div>
+      </div>
+
+      <!-- Colonne formulaire -->
+      <div class="cv-card" data-reveal data-reveal-delay="150">
+
+        <form class="cv-form" id="cvForm" novalidate>
+          <div class="cv-row">
+            <div class="cv-field" id="field-prenom">
+              <label for="cv-prenom">Prénom</label>
+              <input type="text" id="cv-prenom" name="prenom" autocomplete="given-name" maxlength="60" required>
+              <span class="cv-error">Indiquez votre prénom.</span>
+            </div>
+            <div class="cv-field" id="field-nom">
+              <label for="cv-nom">Nom</label>
+              <input type="text" id="cv-nom" name="nom" autocomplete="family-name" maxlength="60" required>
+              <span class="cv-error">Indiquez votre nom.</span>
+            </div>
+          </div>
+          <div class="cv-row">
+            <div class="cv-field" id="field-tel">
+              <label for="cv-tel">Téléphone</label>
+              <input type="tel" id="cv-tel" name="telephone" autocomplete="tel" inputmode="tel" placeholder="06 12 34 56 78" maxlength="20" required>
+              <span class="cv-error">Indiquez un numéro de téléphone valide.</span>
+            </div>
+            <div class="cv-field" id="field-email">
+              <label for="cv-email">Adresse email</label>
+              <input type="email" id="cv-email" name="email" autocomplete="email" placeholder="vous@exemple.fr" maxlength="100" required>
+              <span class="cv-error">Indiquez une adresse email valide.</span>
+            </div>
+          </div>
+
+          <div class="cv-field">
+            <label>Votre CV</label>
+            <div class="cv-drop" id="cvDrop" role="button" tabindex="0" aria-label="Déposer votre CV">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <strong>Glissez votre CV ici, ou cliquez pour le choisir</strong>
+              <span>PDF ou Word · 4 Mo maximum</span>
+              <input type="file" id="cvFile" name="cv" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            </div>
+            <div class="cv-file" id="cvFileChip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span class="cv-file-name" id="cvFileName"></span>
+              <button type="button" id="cvFileRemove" aria-label="Retirer le fichier">✕</button>
+            </div>
+            <span class="cv-error" id="cvFileError">Ajoutez votre CV (PDF ou Word, 4&nbsp;Mo max).</span>
+          </div>
+
+          <!-- Champ piège (honeypot) : un humain ne le voit pas, un robot le remplit -->
+          <div class="cv-hp" aria-hidden="true">
+            <label for="cv-siteweb">Votre site web</label>
+            <input type="text" id="cv-siteweb" name="site_web" tabindex="-1" autocomplete="off">
+          </div>
+
+          <!-- Vérification anti-robots Cloudflare Turnstile -->
+          <div class="cv-turnstile" id="cvTurnstile"></div>
+
+          <div class="cv-limit" id="cvLimit" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Vous avez déjà déposé plusieurs CV récemment depuis cet appareil. Merci de réessayer dans une heure.</span>
+          </div>
+
+          <div class="cv-limit" id="cvApiError" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="cvApiErrorText"></span>
+          </div>
+
+          <label class="cv-consent" id="cvConsent">
+            <input type="checkbox" id="cv-consent-check" required>
+            <span>J'accepte que Swipelink conserve mon CV et mes coordonnées pour me proposer des offres d'emploi correspondant à mon profil. <a href="politique-de-confidentialite.html">Politique de confidentialité</a></span>
+          </label>
+
+          <button type="submit" class="btn-liquid btn-lg-liquid" style="justify-content:center;">
+            Envoyer ma candidature
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Popup de remerciement après dépôt du CV -->
+<div class="cv-modal" id="cvModal" role="dialog" aria-modal="true" aria-labelledby="cvModalTitle">
+  <div class="cv-modal-card">
+    <button type="button" class="cv-modal-close" id="cvModalClose" aria-label="Fermer">✕</button>
+    <img src="/assets/swipelink-bleu.png" alt="Swipelink" class="cv-modal-logo">
+    <div class="ok">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2 id="cvModalTitle">Merci beaucoup&nbsp;!</h2>
+    <p>Votre CV est bien enregistré. Vous serez contacté par notre technologie dès qu'une offre peut vous convenir.<br>Merci et à bientôt&nbsp;!</p>
+    <button type="button" class="btn-liquid btn-lg-liquid" id="cvModalOk" style="justify-content:center;width:100%;">À bientôt 👋</button>
+  </div>
+</div>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <h4>Recrutez mieux, plus vite, plus simplement.</h4>
+        <p style="color:rgba(255,255,255,.5);font-size:.92rem;max-width:340px;">L'alternative digitale aux cabinets de recrutement, pensée pour les métiers de terrain.</p>
+        <div class="footer-social">
+          <a href="https://fr.linkedin.com/company/swipelink" aria-label="LinkedIn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5zm2 6h2.5v9H7zm1.25-3a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5zM12 9h2.4v1.3c.5-.8 1.5-1.5 2.85-1.5 2.05 0 3.25 1.35 3.25 3.7V18H18v-4.8c0-1.15-.45-1.95-1.5-1.95s-1.65.7-1.65 1.95V18H12V9z"/></svg></a>
+          <a href="https://www.instagram.com/swipelink.fr/" aria-label="Instagram"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3H8C5.24 3 3 5.24 3 8v8c0 2.76 2.24 5 5 5h8c2.76 0 5-2.24 5-5V8c0-2.76-2.24-5-5-5zm3.25 13c0 1.79-1.46 3.25-3.25 3.25H8c-1.79 0-3.25-1.46-3.25-3.25V8c0-1.79 1.46-3.25 3.25-3.25h8c17.7926 4.75549 19.2445 6.20735 19.25 8V16ZM16.75 8.25C17.3023 8.25 17.75 7.80228 17.75 7.25C17.75 6.69772 17.3023 6.25 16.75 6.25C16.1977 6.25 15.75 6.69772 15.75 7.25C15.75 7.80228 16.1977 8.25 16.75 8.25ZM12 7.5C9.51472 7.5 7.5 9.51472 7.5 12C7.5 14.4853 9.51472 16.5 12 16.5C14.4853 16.5 16.5 14.4853 16.5 12C16.5027 10.8057 16.0294 9.65957 15.1849 8.81508C14.3404 7.97059 13.1943 7.49734 12 7.5ZM9.25 12C9.25 13.5188 10.4812 14.75 12 14.75C13.5188 14.75 14.75 13.5188 14.75 12C14.75 10.4812 13.5188 9.25 12 9.25C10.4812 9.25 9.25 10.4812 9.25 12Z"/></svg></a>
+        </div>
+      </div>
+      <div class="footer-col"><h5>Pages</h5><a href="index.html">Accueil</a><a href="a-propos.html">À propos</a><a href="tarifs.html">Tarifs</a><a href="blog.html">Blog</a><a href="contact.html">Contact</a><a href="candidats.html">Espace candidat</a></div>
+      <div class="footer-col"><h5>Nous contacter</h5><a href="mailto:contact@swipelink.fr">contact@swipelink.fr</a>
+<span style="display:flex;align-items:center;gap:.45rem;color:rgba(255,255,255,.7);font-size:.85rem;padding:.35rem 0 0;font-weight:500;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/></svg>Réponse en moins d'une heure</span></div>
+    </div>
+    <div class="footer-bottom"><span>© 2024 Swipelink · Tous droits réservés</span><div><a href="politique-de-confidentialite.html">Confidentialité</a><a href="mentions-legales.html">Mentions légales</a></div></div>
+  </div>
+</footer>
+
+<script src="assets/script.js" defer></script>
+<script>
+(function () {
+  var form = document.getElementById('cvForm');
+  if (!form) return;
+
+  /* ===== Anti-spam : Cloudflare Turnstile =====
+     Clé de TEST Cloudflare (accepte tout). Avant la mise en prod :
+     1. créer le site sur https://dash.cloudflare.com -> Turnstile (gratuit)
+     2. remplacer la clé ci-dessous par la vraie clé publique du site
+     3. vérifier le jeton côté serveur avec la clé secrète au branchement. */
+  var TURNSTILE_SITE_KEY = '1x00000000000000000000AA';
+  var turnstileToken = '';
+  var turnstileReady = false;
+
+  window.onTurnstileLoad = function () {
+    try {
+      window.turnstile.render('#cvTurnstile', {
+        sitekey: TURNSTILE_SITE_KEY,
+        language: 'fr',
+        callback: function (token) { turnstileToken = token; },
+        'expired-callback': function () { turnstileToken = ''; }
+      });
+      turnstileReady = true;
+    } catch (e) { /* widget indisponible : le serveur re-vérifiera de toute façon */ }
+  };
+  var ts = document.createElement('script');
+  ts.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+  ts.async = true; ts.defer = true;
+  document.head.appendChild(ts);
+
+  /* ===== Anti-spam : limite de dépôts côté navigateur =====
+     3 dépôts max par heure depuis le même appareil. C'est un premier filtre ;
+     la vraie limite par adresse IP sera appliquée côté serveur au branchement. */
+  var LIMIT_MAX = 3, LIMIT_WINDOW = 60 * 60 * 1000;
+  function recentSubmits() {
+    try {
+      var arr = JSON.parse(localStorage.getItem('cv_depots') || '[]');
+      var now = Date.now();
+      return arr.filter(function (t) { return now - t < LIMIT_WINDOW; });
+    } catch (e) { return []; }
+  }
+  function recordSubmit() {
+    try {
+      var arr = recentSubmits(); arr.push(Date.now());
+      localStorage.setItem('cv_depots', JSON.stringify(arr));
+    } catch (e) { /* stockage indisponible : tant pis, le serveur limitera */ }
+  }
+
+  var drop = document.getElementById('cvDrop');
+  var fileInput = document.getElementById('cvFile');
+  var chip = document.getElementById('cvFileChip');
+  var chipName = document.getElementById('cvFileName');
+  var chipRemove = document.getElementById('cvFileRemove');
+  var fileError = document.getElementById('cvFileError');
+  var consent = document.getElementById('cvConsent');
+  var consentCheck = document.getElementById('cv-consent-check');
+
+  var MAX_SIZE = 4 * 1024 * 1024;
+  var OK_EXT = /\.(pdf|doc|docx)$/i;
+
+  function setFile(file) {
+    if (!file) return;
+    if (!OK_EXT.test(file.name)) { showFileError('Format non accepté : utilisez un PDF ou un document Word.'); return; }
+    if (file.size > MAX_SIZE) { showFileError('Fichier trop lourd : 4 Mo maximum.'); return; }
+    if (fileInput.files.length === 0 || fileInput.files[0] !== file) {
+      try {
+        var dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+      } catch (e) { /* vieux navigateurs : le input garde sa sélection directe */ }
+    }
+    chipName.textContent = file.name + ' · ' + (file.size / 1024 / 1024).toFixed(1).replace('.', ',') + ' Mo';
+    chip.classList.add('is-visible');
+    drop.style.display = 'none';
+    hideFileError();
+  }
+
+  function clearFile() {
+    fileInput.value = '';
+    chip.classList.remove('is-visible');
+    drop.style.display = '';
+  }
+
+  function showFileError(msg) {
+    if (msg) fileError.textContent = msg;
+    fileError.style.display = 'block';
+    drop.classList.add('has-error');
+  }
+  function hideFileError() {
+    fileError.style.display = 'none';
+    drop.classList.remove('has-error');
+  }
+
+  drop.addEventListener('click', function () { fileInput.click(); });
+  drop.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener('change', function () { setFile(fileInput.files[0]); });
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('is-over'); });
+  });
+  drop.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  });
+  chipRemove.addEventListener('click', clearFile);
+
+  function fieldOk(id, test) {
+    var wrap = document.getElementById('field-' + id);
+    var input = wrap.querySelector('input');
+    var ok = test(input.value.trim());
+    wrap.classList.toggle('has-error', !ok);
+    return ok;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    // Honeypot rempli = robot : on affiche la popup sans rien enregistrer.
+    if (document.getElementById('cv-siteweb').value !== '') {
+      openModal();
+      return;
+    }
+
+    // Limite de dépôts atteinte depuis cet appareil.
+    var limitBox = document.getElementById('cvLimit');
+    if (recentSubmits().length >= LIMIT_MAX) {
+      limitBox.classList.add('is-visible');
+      limitBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+    limitBox.classList.remove('is-visible');
+
+    var ok = true;
+    ok = fieldOk('prenom', function (v) { return v.length >= 2; }) && ok;
+    ok = fieldOk('nom', function (v) { return v.length >= 2; }) && ok;
+    ok = fieldOk('tel', function (v) { return v.replace(/\D/g, '').length >= 9; }) && ok;
+    ok = fieldOk('email', function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }) && ok;
+    if (!fileInput.files.length) { showFileError('Ajoutez votre CV (PDF ou Word, 4 Mo max).'); ok = false; }
+    if (!consentCheck.checked) { consent.classList.add('has-error'); ok = false; }
+    else { consent.classList.remove('has-error'); }
+    if (!ok) return;
+
+    // Jeton Turnstile requis quand le widget est disponible.
+    if (turnstileReady && !turnstileToken) {
+      document.getElementById('cvTurnstile').scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+
+    // Envoi réel vers l'API (voir api/candidature.js : Turnstile, limite IP,
+    // validation du fichier, stockage Supabase). Hors du site réel
+    // (prévisualisations locales ou artifact), popup de démonstration.
+    var isRealSite = location.hostname.indexOf('swipelink') !== -1 || /\.vercel\.app$/.test(location.hostname) || location.hostname === 'localhost';
+    if (!isRealSite) { recordSubmit(); openModal(); return; }
+
+    var apiError = document.getElementById('cvApiError');
+    var apiErrorText = document.getElementById('cvApiErrorText');
+    apiError.classList.remove('is-visible');
+    var submitBtn = form.querySelector('button[type=submit]');
+    var submitHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Envoi en cours…';
+    function restoreBtn() { submitBtn.disabled = false; submitBtn.innerHTML = submitHtml; }
+    function showApiError(msg) {
+      apiErrorText.textContent = msg;
+      apiError.classList.add('is-visible');
+      apiError.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    var fd = new FormData(form);
+    fd.append('turnstile_token', turnstileToken);
+    fetch('/api/candidature', { method: 'POST', body: fd })
+      .then(function (r) {
+        if (r.ok) { recordSubmit(); openModal(); return; }
+        if (r.status === 429) {
+          limitBox.classList.add('is-visible');
+          limitBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          return;
+        }
+        if (r.status === 503) {
+          showApiError("Le dépôt de CV ouvre très bientôt. En attendant, envoyez votre CV à contact@swipelink.fr — on le prendra en compte.");
+          return;
+        }
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          showApiError(d.error || "L'envoi a échoué. Réessayez dans un instant.");
+        });
+      })
+      .catch(function () {
+        showApiError("L'envoi a échoué. Vérifiez votre connexion et réessayez.");
+      })
+      .then(restoreBtn);
+  });
+
+  var modal = document.getElementById('cvModal');
+  function openModal() {
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    form.reset();
+    clearFile();
+    ['prenom', 'nom', 'tel', 'email'].forEach(function (id) {
+      document.getElementById('field-' + id).classList.remove('has-error');
+    });
+    consent.classList.remove('has-error');
+    if (turnstileReady) {
+      try { window.turnstile.reset(); turnstileToken = ''; } catch (e) {}
+    }
+  }
+  document.getElementById('cvModalClose').addEventListener('click', closeModal);
+  document.getElementById('cvModalOk').addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+  });
+
+  consentCheck.addEventListener('change', function () {
+    if (consentCheck.checked) consent.classList.remove('has-error');
+  });
+})();
+</script>
+</body>
+</html>

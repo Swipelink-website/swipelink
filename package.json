@@ -1,0 +1,8 @@
+{
+  "name": "swipelink-site",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "busboy": "^1.6.0"
+  }
+}
