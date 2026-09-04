@@ -124,6 +124,30 @@
   }
   .cv-file button:hover { color: #dc2626; }
 
+  /* Champ piège anti-bots : invisible pour les humains, rempli par les robots */
+  .cv-hp {
+    position: absolute !important;
+    left: -9999px; top: -9999px;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    opacity: 0;
+  }
+
+  .cv-limit {
+    display: none;
+    gap: .6rem; align-items: flex-start;
+    padding: .85rem 1.1rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    font-size: .87rem; color: #b91c1c; font-weight: 500;
+  }
+  .cv-limit.is-visible { display: flex; }
+  .cv-limit svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  .cv-turnstile { display: flex; justify-content: center; min-height: 0; }
+  .cv-turnstile:not(:empty) { min-height: 65px; }
+
   .cv-consent { display: flex; gap: .6rem; align-items: flex-start; font-size: .82rem; color: var(--text-soft); }
   .cv-consent input { margin-top: 3px; accent-color: var(--primary); width: 15px; height: 15px; flex-shrink: 0; }
   .cv-consent a { color: var(--primary); text-decoration: underline; }
@@ -309,6 +333,20 @@
             <span class="cv-error" id="cvFileError">Ajoutez votre CV (PDF ou Word, 5&nbsp;Mo max).</span>
           </div>
 
+          <!-- Champ piège (honeypot) : un humain ne le voit pas, un robot le remplit -->
+          <div class="cv-hp" aria-hidden="true">
+            <label for="cv-siteweb">Votre site web</label>
+            <input type="text" id="cv-siteweb" name="site_web" tabindex="-1" autocomplete="off">
+          </div>
+
+          <!-- Vérification anti-robots Cloudflare Turnstile -->
+          <div class="cv-turnstile" id="cvTurnstile"></div>
+
+          <div class="cv-limit" id="cvLimit" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Vous avez déjà déposé plusieurs CV récemment depuis cet appareil. Merci de réessayer dans une heure.</span>
+          </div>
+
           <label class="cv-consent" id="cvConsent">
             <input type="checkbox" id="cv-consent-check" required>
             <span>J'accepte que Swipelink conserve mon CV et mes coordonnées pour me proposer des offres d'emploi correspondant à mon profil. <a href="politique-de-confidentialite.html">Politique de confidentialité</a></span>
@@ -365,6 +403,49 @@
 (function () {
   var form = document.getElementById('cvForm');
   if (!form) return;
+
+  /* ===== Anti-spam : Cloudflare Turnstile =====
+     Clé de TEST Cloudflare (accepte tout). Avant la mise en prod :
+     1. créer le site sur https://dash.cloudflare.com -> Turnstile (gratuit)
+     2. remplacer la clé ci-dessous par la vraie clé publique du site
+     3. vérifier le jeton côté serveur avec la clé secrète au branchement. */
+  var TURNSTILE_SITE_KEY = '1x00000000000000000000AA';
+  var turnstileToken = '';
+  var turnstileReady = false;
+
+  window.onTurnstileLoad = function () {
+    try {
+      window.turnstile.render('#cvTurnstile', {
+        sitekey: TURNSTILE_SITE_KEY,
+        language: 'fr',
+        callback: function (token) { turnstileToken = token; },
+        'expired-callback': function () { turnstileToken = ''; }
+      });
+      turnstileReady = true;
+    } catch (e) { /* widget indisponible : le serveur re-vérifiera de toute façon */ }
+  };
+  var ts = document.createElement('script');
+  ts.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+  ts.async = true; ts.defer = true;
+  document.head.appendChild(ts);
+
+  /* ===== Anti-spam : limite de dépôts côté navigateur =====
+     3 dépôts max par heure depuis le même appareil. C'est un premier filtre ;
+     la vraie limite par adresse IP sera appliquée côté serveur au branchement. */
+  var LIMIT_MAX = 3, LIMIT_WINDOW = 60 * 60 * 1000;
+  function recentSubmits() {
+    try {
+      var arr = JSON.parse(localStorage.getItem('cv_depots') || '[]');
+      var now = Date.now();
+      return arr.filter(function (t) { return now - t < LIMIT_WINDOW; });
+    } catch (e) { return []; }
+  }
+  function recordSubmit() {
+    try {
+      var arr = recentSubmits(); arr.push(Date.now());
+      localStorage.setItem('cv_depots', JSON.stringify(arr));
+    } catch (e) { /* stockage indisponible : tant pis, le serveur limitera */ }
+  }
 
   var drop = document.getElementById('cvDrop');
   var fileInput = document.getElementById('cvFile');
@@ -437,6 +518,22 @@
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+
+    // Honeypot rempli = robot : on affiche la popup sans rien enregistrer.
+    if (document.getElementById('cv-siteweb').value !== '') {
+      openModal();
+      return;
+    }
+
+    // Limite de dépôts atteinte depuis cet appareil.
+    var limitBox = document.getElementById('cvLimit');
+    if (recentSubmits().length >= LIMIT_MAX) {
+      limitBox.classList.add('is-visible');
+      limitBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+    limitBox.classList.remove('is-visible');
+
     var ok = true;
     ok = fieldOk('prenom', function (v) { return v.length >= 2; }) && ok;
     ok = fieldOk('nom', function (v) { return v.length >= 2; }) && ok;
@@ -447,8 +544,17 @@
     else { consent.classList.remove('has-error'); }
     if (!ok) return;
 
-    // TODO: brancher ici l'envoi réel de la candidature (stockage des CV à définir).
+    // Jeton Turnstile requis quand le widget est disponible.
+    if (turnstileReady && !turnstileToken) {
+      document.getElementById('cvTurnstile').scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+
+    // TODO: brancher ici l'envoi réel de la candidature (stockage des CV à définir),
+    // en transmettant turnstileToken pour vérification serveur (clé secrète),
+    // avec limite par IP et validation stricte du fichier côté serveur.
     // Tant que ce n'est pas branché, la page ne doit pas être mise en production.
+    recordSubmit();
     openModal();
   });
 
@@ -466,6 +572,9 @@
       document.getElementById('field-' + id).classList.remove('has-error');
     });
     consent.classList.remove('has-error');
+    if (turnstileReady) {
+      try { window.turnstile.reset(); turnstileToken = ''; } catch (e) {}
+    }
   }
   document.getElementById('cvModalClose').addEventListener('click', closeModal);
   document.getElementById('cvModalOk').addEventListener('click', closeModal);
