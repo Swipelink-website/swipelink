@@ -29,3 +29,7 @@ body::after{content:"";position:fixed;left:0;top:0;width:1px;height:1px;pointer-
 @media(max-width:600px){.blog-search{flex-basis:100%}}
 
 @media(min-width:1150px){.navbar-links{gap:0}.navbar-links a{padding:.5rem .55rem;font-size:.85rem}.navbar-actions{gap:.4rem}.navbar-actions .btn-sm{padding:.5rem .75rem;font-size:.82rem}.navbar-actions .btn-sm-liquid{padding:.5rem .8rem;font-size:.82rem}}
+
+/* Jonction en-tête de page -> première section : espace raisonnable */
+.page-header{padding-bottom:clamp(1.25rem,3vw,2rem)}
+.page-header+.section{padding-top:2rem}
