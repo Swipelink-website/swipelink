@@ -326,7 +326,7 @@
             <div class="cv-drop" id="cvDrop" role="button" tabindex="0" aria-label="Déposer votre CV">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <strong>Glissez votre CV ici, ou cliquez pour le choisir</strong>
-              <span>PDF ou Word · 5 Mo maximum</span>
+              <span>PDF ou Word · 4 Mo maximum</span>
               <input type="file" id="cvFile" name="cv" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
             </div>
             <div class="cv-file" id="cvFileChip">
@@ -334,7 +334,7 @@
               <span class="cv-file-name" id="cvFileName"></span>
               <button type="button" id="cvFileRemove" aria-label="Retirer le fichier">✕</button>
             </div>
-            <span class="cv-error" id="cvFileError">Ajoutez votre CV (PDF ou Word, 5&nbsp;Mo max).</span>
+            <span class="cv-error" id="cvFileError">Ajoutez votre CV (PDF ou Word, 4&nbsp;Mo max).</span>
           </div>
 
           <!-- Champ piège (honeypot) : un humain ne le voit pas, un robot le remplit -->
@@ -349,6 +349,11 @@
           <div class="cv-limit" id="cvLimit" role="alert">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span>Vous avez déjà déposé plusieurs CV récemment depuis cet appareil. Merci de réessayer dans une heure.</span>
+          </div>
+
+          <div class="cv-limit" id="cvApiError" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="cvApiErrorText"></span>
           </div>
 
           <label class="cv-consent" id="cvConsent">
@@ -460,13 +465,13 @@
   var consent = document.getElementById('cvConsent');
   var consentCheck = document.getElementById('cv-consent-check');
 
-  var MAX_SIZE = 5 * 1024 * 1024;
+  var MAX_SIZE = 4 * 1024 * 1024;
   var OK_EXT = /\.(pdf|doc|docx)$/i;
 
   function setFile(file) {
     if (!file) return;
     if (!OK_EXT.test(file.name)) { showFileError('Format non accepté : utilisez un PDF ou un document Word.'); return; }
-    if (file.size > MAX_SIZE) { showFileError('Fichier trop lourd : 5 Mo maximum.'); return; }
+    if (file.size > MAX_SIZE) { showFileError('Fichier trop lourd : 4 Mo maximum.'); return; }
     if (fileInput.files.length === 0 || fileInput.files[0] !== file) {
       try {
         var dt = new DataTransfer();
@@ -543,7 +548,7 @@
     ok = fieldOk('nom', function (v) { return v.length >= 2; }) && ok;
     ok = fieldOk('tel', function (v) { return v.replace(/\D/g, '').length >= 9; }) && ok;
     ok = fieldOk('email', function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }) && ok;
-    if (!fileInput.files.length) { showFileError('Ajoutez votre CV (PDF ou Word, 5 Mo max).'); ok = false; }
+    if (!fileInput.files.length) { showFileError('Ajoutez votre CV (PDF ou Word, 4 Mo max).'); ok = false; }
     if (!consentCheck.checked) { consent.classList.add('has-error'); ok = false; }
     else { consent.classList.remove('has-error'); }
     if (!ok) return;
@@ -554,12 +559,48 @@
       return;
     }
 
-    // TODO: brancher ici l'envoi réel de la candidature (stockage des CV à définir),
-    // en transmettant turnstileToken pour vérification serveur (clé secrète),
-    // avec limite par IP et validation stricte du fichier côté serveur.
-    // Tant que ce n'est pas branché, la page ne doit pas être mise en production.
-    recordSubmit();
-    openModal();
+    // Envoi réel vers l'API (voir api/candidature.js : Turnstile, limite IP,
+    // validation du fichier, stockage Supabase). Hors du site réel
+    // (prévisualisations locales ou artifact), popup de démonstration.
+    var isRealSite = location.hostname.indexOf('swipelink') !== -1 || /\.vercel\.app$/.test(location.hostname) || location.hostname === 'localhost';
+    if (!isRealSite) { recordSubmit(); openModal(); return; }
+
+    var apiError = document.getElementById('cvApiError');
+    var apiErrorText = document.getElementById('cvApiErrorText');
+    apiError.classList.remove('is-visible');
+    var submitBtn = form.querySelector('button[type=submit]');
+    var submitHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Envoi en cours…';
+    function restoreBtn() { submitBtn.disabled = false; submitBtn.innerHTML = submitHtml; }
+    function showApiError(msg) {
+      apiErrorText.textContent = msg;
+      apiError.classList.add('is-visible');
+      apiError.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    var fd = new FormData(form);
+    fd.append('turnstile_token', turnstileToken);
+    fetch('/api/candidature', { method: 'POST', body: fd })
+      .then(function (r) {
+        if (r.ok) { recordSubmit(); openModal(); return; }
+        if (r.status === 429) {
+          limitBox.classList.add('is-visible');
+          limitBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          return;
+        }
+        if (r.status === 503) {
+          showApiError("Le dépôt de CV ouvre très bientôt. En attendant, envoyez votre CV à contact@swipelink.fr — on le prendra en compte.");
+          return;
+        }
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          showApiError(d.error || "L'envoi a échoué. Réessayez dans un instant.");
+        });
+      })
+      .catch(function () {
+        showApiError("L'envoi a échoué. Vérifiez votre connexion et réessayez.");
+      })
+      .then(restoreBtn);
   });
 
   var modal = document.getElementById('cvModal');
