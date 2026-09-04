@@ -11,6 +11,9 @@
 <link rel="stylesheet" href="assets/style.css?v=4">
 <link rel="icon" href="/assets/safeimagekit-capture-d-cran-2025-04-22-164446.png" />
 <style>
+  /* Rapproche le formulaire du titre (le page-header générique laisse un grand creux) */
+  .page-header { padding-bottom: 1.5rem; }
+
   /* Le badge « Espace candidat » affiche le S de Swipelink à la place du point animé */
   .page-header .eyebrow::before { content: none; }
   .eyebrow-s { height: 16px; width: 16px; display: block; border-radius: 50%; }
@@ -419,6 +422,10 @@
      2. remplacer la clé ci-dessous par la vraie clé publique du site
      3. vérifier le jeton côté serveur avec la clé secrète au branchement. */
   var TURNSTILE_SITE_KEY = '1x00000000000000000000AA';
+  // La clé de test Cloudflare affiche un bandeau « à des fins de test » et ne
+  // protège rien : on ne montre le widget qu'avec une vraie clé. Le serveur,
+  // lui, vérifie toujours le jeton (clé secrète de test tant que non configurée).
+  var TURNSTILE_IS_TEST = TURNSTILE_SITE_KEY === '1x00000000000000000000AA';
   var turnstileToken = '';
   var turnstileReady = false;
 
@@ -433,10 +440,12 @@
       turnstileReady = true;
     } catch (e) { /* widget indisponible : le serveur re-vérifiera de toute façon */ }
   };
-  var ts = document.createElement('script');
-  ts.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
-  ts.async = true; ts.defer = true;
-  document.head.appendChild(ts);
+  if (!TURNSTILE_IS_TEST) {
+    var ts = document.createElement('script');
+    ts.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+    ts.async = true; ts.defer = true;
+    document.head.appendChild(ts);
+  }
 
   /* ===== Anti-spam : limite de dépôts côté navigateur =====
      3 dépôts max par heure depuis le même appareil. C'est un premier filtre ;
