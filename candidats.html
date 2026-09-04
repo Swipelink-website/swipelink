@@ -11,6 +11,10 @@
 <link rel="stylesheet" href="assets/style.css?v=4">
 <link rel="icon" href="/assets/safeimagekit-capture-d-cran-2025-04-22-164446.png" />
 <style>
+  /* Le badge « Espace candidat » affiche le S de Swipelink à la place du point animé */
+  .page-header .eyebrow::before { content: none; }
+  .eyebrow-s { height: 15px; width: auto; display: block; }
+
   .candidat-grid {
     display: grid;
     grid-template-columns: 1fr 1.15fr;
@@ -249,7 +253,7 @@
 
 <section class="page-header">
   <div class="container">
-    <span class="eyebrow" data-reveal>Espace candidat</span>
+    <span class="eyebrow" data-reveal><img src="/assets/safeimagekit-capture-d-cran-2025-04-22-164446.png" alt="" class="eyebrow-s">Espace candidat</span>
     <h1 data-reveal data-reveal-delay="100">Déposez votre CV, on vous contacte <span class="gradient-text">dès qu'on a une offre pour vous</span></h1>
     <p data-reveal data-reveal-delay="200">Boucher, chef de rayon, directeur de magasin, métiers de bouche… Nos recruteurs chassent tous les jours pour les plus grandes enseignes. Laissez-nous votre CV : si un poste correspond à votre profil et votre région, on vous appelle.</p>
   </div>
