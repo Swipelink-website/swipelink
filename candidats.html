@@ -13,7 +13,7 @@
 <style>
   /* Le badge « Espace candidat » affiche le S de Swipelink à la place du point animé */
   .page-header .eyebrow::before { content: none; }
-  .eyebrow-s { height: 15px; width: auto; display: block; }
+  .eyebrow-s { height: 16px; width: 16px; display: block; border-radius: 50%; }
 
   .candidat-grid {
     display: grid;
@@ -255,7 +255,7 @@
   <div class="container">
     <span class="eyebrow" data-reveal><img src="/assets/safeimagekit-capture-d-cran-2025-04-22-164446.png" alt="" class="eyebrow-s">Espace candidat</span>
     <h1 data-reveal data-reveal-delay="100">Déposez votre CV, on vous contacte <span class="gradient-text">dès qu'on a une offre pour vous</span></h1>
-    <p data-reveal data-reveal-delay="200">Boucher, chef de rayon, directeur de magasin, métiers de bouche… Nos recruteurs chassent tous les jours pour les plus grandes enseignes. Laissez-nous votre CV : si un poste correspond à votre profil et votre région, on vous appelle.</p>
+    <p data-reveal data-reveal-delay="200">Nos recruteurs chassent tous les jours pour les plus grandes enseignes. Laissez-nous votre CV : si un poste correspond à votre profil et votre région, on vous appelle.</p>
   </div>
 </section>
 
@@ -299,24 +299,24 @@
           <div class="cv-row">
             <div class="cv-field" id="field-prenom">
               <label for="cv-prenom">Prénom</label>
-              <input type="text" id="cv-prenom" name="prenom" autocomplete="given-name" required>
+              <input type="text" id="cv-prenom" name="prenom" autocomplete="given-name" maxlength="60" required>
               <span class="cv-error">Indiquez votre prénom.</span>
             </div>
             <div class="cv-field" id="field-nom">
               <label for="cv-nom">Nom</label>
-              <input type="text" id="cv-nom" name="nom" autocomplete="family-name" required>
+              <input type="text" id="cv-nom" name="nom" autocomplete="family-name" maxlength="60" required>
               <span class="cv-error">Indiquez votre nom.</span>
             </div>
           </div>
           <div class="cv-row">
             <div class="cv-field" id="field-tel">
               <label for="cv-tel">Téléphone</label>
-              <input type="tel" id="cv-tel" name="telephone" autocomplete="tel" inputmode="tel" placeholder="06 12 34 56 78" required>
+              <input type="tel" id="cv-tel" name="telephone" autocomplete="tel" inputmode="tel" placeholder="06 12 34 56 78" maxlength="20" required>
               <span class="cv-error">Indiquez un numéro de téléphone valide.</span>
             </div>
             <div class="cv-field" id="field-email">
               <label for="cv-email">Adresse email</label>
-              <input type="email" id="cv-email" name="email" autocomplete="email" placeholder="vous@exemple.fr" required>
+              <input type="email" id="cv-email" name="email" autocomplete="email" placeholder="vous@exemple.fr" maxlength="100" required>
               <span class="cv-error">Indiquez une adresse email valide.</span>
             </div>
           </div>
