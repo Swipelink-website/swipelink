@@ -28,6 +28,15 @@ create table public.candidatures (
 alter table public.candidatures enable row level security;
 
 create index candidatures_ip_hash_created_at on public.candidatures (ip_hash, created_at);
+create index candidatures_email_created_at on public.candidatures (email, created_at);
+
+-- Verrou « une alerte volume par jour » (utilisée par l'API pour ne pas spammer d'emails)
+create table public.alertes (
+  jour date primary key,
+  type text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.alertes enable row level security;
 ```
 
 ### b. Le bucket de stockage
@@ -45,6 +54,10 @@ Projet Vercel → Settings → Environment Variables (environnement Production) 
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role (⚠️ secrète, jamais côté client) |
 | `TURNSTILE_SECRET_KEY` | voir étape 3 |
 | `IP_HASH_SALT` | une chaîne aléatoire quelconque (ex. générée sur place), pour pseudonymiser les IP |
+| `RESEND_API_KEY` | *(optionnel)* clé API https://resend.com (gratuit) pour recevoir l'alerte volume par email |
+| `ALERT_EMAIL` | *(optionnel)* l'adresse qui reçoit l'alerte volume |
+| `DAILY_CAP` | *(optionnel, défaut 200)* disjoncteur : dépôts max sur 24 h, tout confondu |
+| `ALERT_THRESHOLD` | *(optionnel, défaut 50)* seuil d'alerte volume sur 24 h |
 
 Puis redéployer (Deployments → Redeploy) pour que les variables soient prises en compte.
 
@@ -72,3 +85,9 @@ mais il laisse tout passer : à remplacer avant d'annoncer publiquement la page.
 - Fichier : PDF/Word uniquement, 4 Mo max, type réel vérifié par les premiers octets.
 - Champs bornés et validés côté serveur (le client ne fait foi de rien).
 - Bucket privé + RLS sans policy : aucune lecture publique possible.
+- Disjoncteur global : 200 dépôts max/24 h (attaque distribuée ⇒ coût borné),
+  avec alerte email à 50 (une seule par jour) si Resend est configuré.
+- Déduplication : un même email sous 7 jours met à jour la candidature
+  existante (nouveau CV remplace l'ancien) au lieu de créer un doublon.
+- Rétention RGPD : purge automatique des candidatures (et CV) de plus de
+  2 ans, par petits lots à chaque nouveau dépôt.
