@@ -351,7 +351,7 @@
 
           <div class="cv-limit" id="cvLimit" role="alert">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span>Vous avez déjà déposé plusieurs CV récemment depuis cet appareil. Merci de réessayer dans une heure.</span>
+            <span id="cvLimitText">Vous avez déjà déposé plusieurs CV récemment depuis cet appareil. Merci de réessayer dans une heure.</span>
           </div>
 
           <div class="cv-limit" id="cvApiError" role="alert">
@@ -594,9 +594,11 @@
       .then(function (r) {
         if (r.ok) { recordSubmit(); openModal(); return; }
         if (r.status === 429) {
-          limitBox.classList.add('is-visible');
-          limitBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
-          return;
+          return r.json().catch(function () { return {}; }).then(function (d) {
+            if (d.error) document.getElementById('cvLimitText').textContent = d.error;
+            limitBox.classList.add('is-visible');
+            limitBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          });
         }
         if (r.status === 503) {
           showApiError("Le dépôt de CV ouvre très bientôt. En attendant, envoyez votre CV à contact@swipelink.fr — on le prendra en compte.");
