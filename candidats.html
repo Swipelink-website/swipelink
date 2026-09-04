@@ -129,18 +129,50 @@
   .cv-consent a { color: var(--primary); text-decoration: underline; }
   .cv-consent.has-error { color: #dc2626; }
 
-  .cv-success { display: none; text-align: center; padding: 2rem 0; }
-  .cv-success.is-visible { display: block; }
-  .cv-success .ok {
-    width: 64px; height: 64px; margin: 0 auto 1.25rem;
+  .cv-modal {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 1.25rem;
+    background: rgba(15,23,42,.45);
+    backdrop-filter: blur(6px);
+  }
+  .cv-modal.is-open { display: flex; }
+  .cv-modal-card {
+    background: #fff;
+    border-radius: var(--r-lg, 24px);
+    max-width: 460px; width: 100%;
+    padding: 2.75rem 2.25rem 2.25rem;
+    text-align: center;
+    box-shadow: 0 24px 60px -12px rgba(15,23,42,.35);
+    position: relative;
+    animation: cvModalIn .35s var(--ease-out, ease-out);
+  }
+  @keyframes cvModalIn {
+    from { opacity: 0; transform: translateY(18px) scale(.96); }
+    to { opacity: 1; transform: none; }
+  }
+  .cv-modal-card .ok {
+    width: 68px; height: 68px; margin: 0 auto 1.4rem;
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     background: linear-gradient(135deg, #10b981, #059669);
     color: #fff;
+    box-shadow: 0 10px 24px -8px rgba(16,185,129,.55);
   }
-  .cv-success .ok svg { width: 30px; height: 30px; }
-  .cv-success h2 { margin: 0 0 .5rem; font-size: 1.4rem; }
-  .cv-success p { margin: 0; color: var(--text-soft); }
+  .cv-modal-card .ok svg { width: 32px; height: 32px; }
+  .cv-modal-card h2 { margin: 0 0 .65rem; font-size: 1.45rem; letter-spacing: -.01em; }
+  .cv-modal-card p { margin: 0 0 1.6rem; color: var(--text-soft); font-size: .97rem; line-height: 1.6; }
+  .cv-modal-close {
+    position: absolute; top: 1rem; right: 1rem;
+    width: 36px; height: 36px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: #fff; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--text-soft); font-size: 1rem; line-height: 1;
+    transition: color .2s, border-color .2s;
+  }
+  .cv-modal-close:hover { color: var(--ink); border-color: var(--primary); }
 </style>
 <meta property="og:title" content="Espace candidat · Swipelink" />
 <meta property="og:description" content="Déposez votre CV et soyez contacté dès qu'une offre correspond à votre profil." />
@@ -287,18 +319,23 @@
           </button>
         </form>
 
-        <div class="cv-success" id="cvSuccess" role="status">
-          <div class="ok">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <h2>Merci, votre CV est bien enregistré&nbsp;!</h2>
-          <p>Un recruteur Swipelink vous contactera dès qu'une offre correspond à votre profil. Pas besoin de relancer&nbsp;: si ça matche, on vous appelle.</p>
-        </div>
-
       </div>
     </div>
   </div>
 </section>
+
+<!-- Popup de remerciement après dépôt du CV -->
+<div class="cv-modal" id="cvModal" role="dialog" aria-modal="true" aria-labelledby="cvModalTitle">
+  <div class="cv-modal-card">
+    <button type="button" class="cv-modal-close" id="cvModalClose" aria-label="Fermer">✕</button>
+    <div class="ok">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2 id="cvModalTitle">Merci beaucoup&nbsp;!</h2>
+    <p>Votre CV est bien enregistré. Vous serez contacté par notre technologie dès qu'une offre peut vous convenir.<br>Merci et à bientôt&nbsp;!</p>
+    <button type="button" class="btn-liquid btn-lg-liquid" id="cvModalOk" style="justify-content:center;width:100%;">À bientôt 👋</button>
+  </div>
+</div>
 
 </main>
 
@@ -410,8 +447,29 @@
 
     // TODO: brancher ici l'envoi réel de la candidature (stockage des CV à définir).
     // Tant que ce n'est pas branché, la page ne doit pas être mise en production.
-    form.style.display = 'none';
-    document.getElementById('cvSuccess').classList.add('is-visible');
+    openModal();
+  });
+
+  var modal = document.getElementById('cvModal');
+  function openModal() {
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    form.reset();
+    clearFile();
+    ['prenom', 'nom', 'tel', 'email'].forEach(function (id) {
+      document.getElementById('field-' + id).classList.remove('has-error');
+    });
+    consent.classList.remove('has-error');
+  }
+  document.getElementById('cvModalClose').addEventListener('click', closeModal);
+  document.getElementById('cvModalOk').addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
   });
 
   consentCheck.addEventListener('change', function () {
